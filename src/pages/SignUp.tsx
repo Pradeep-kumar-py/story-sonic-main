@@ -4,17 +4,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const SignUp = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: ""
   });
+
+  const { register } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -23,14 +30,45 @@ const SignUp = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords don't match!");
+      toast({
+        variant: "destructive",
+        title: "Password mismatch",
+        description: "Passwords don't match. Please check and try again.",
+      });
       return;
     }
-    // Registration logic would be handled by Supabase
-    console.log("Sign up attempt:", formData);
+
+    if (formData.password.length < 6) {
+      toast({
+        variant: "destructive",
+        title: "Weak password",
+        description: "Password must be at least 6 characters long.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      await register(formData.name, formData.email, formData.password);
+      toast({
+        title: "Welcome to StoryVerse!",
+        description: "Your account has been created successfully.",
+      });
+      navigate("/");
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Registration failed",
+        description: error instanceof Error ? error.message : "Please try again later.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -128,8 +166,8 @@ const SignUp = () => {
                 </Button>
               </div>
             </div>
-            <Button type="submit" className="w-full" size="lg">
-              Create Account
+            <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+              {isSubmitting ? "Creating Account..." : "Create Account"}
             </Button>
           </form>
           

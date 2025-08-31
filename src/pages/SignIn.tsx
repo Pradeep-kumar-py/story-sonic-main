@@ -4,17 +4,43 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { login } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  const from = location.state?.from?.pathname || "/";
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Authentication logic would be handled by Supabase
-    console.log("Sign in attempt:", { email, password });
+    setIsSubmitting(true);
+    
+    try {
+      await login(email, password);
+      toast({
+        title: "Welcome back!",
+        description: "You have been successfully signed in.",
+      });
+      navigate(from, { replace: true });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Sign in failed",
+        description: error instanceof Error ? error.message : "Please check your credentials and try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -69,8 +95,8 @@ const SignIn = () => {
                 </Button>
               </div>
             </div>
-            <Button type="submit" className="w-full" size="lg">
-              Sign In
+            <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+              {isSubmitting ? "Signing In..." : "Sign In"}
             </Button>
           </form>
           
